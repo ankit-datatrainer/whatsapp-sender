@@ -17,12 +17,14 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+const isServerless = !!process.env.VERCEL;
 const ROOT = __dirname;
-const UPLOAD_DIR = path.join(ROOT, 'uploads');
-const TEMPLATES_FILE = path.join(ROOT, 'templates.json');
-const REPORT_FILE = path.join(ROOT, 'Campaign_Report.json');
+const DATA_ROOT = isServerless ? '/tmp' : __dirname;
+const UPLOAD_DIR = path.join(DATA_ROOT, 'uploads');
+const TEMPLATES_FILE = path.join(DATA_ROOT, 'templates.json');
+const REPORT_FILE = path.join(DATA_ROOT, 'Campaign_Report.json');
 
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 app.use(express.json());
 app.use(express.static(path.join(ROOT, 'public')));
@@ -360,6 +362,10 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(PORT, () => {
-    console.log(`\nWhatsApp Campaign Manager running at: http://localhost:${PORT}\n`);
-});
+if (!isServerless || require.main === module) {
+    server.listen(PORT, () => {
+        console.log(`\nWhatsApp Campaign Manager running at: http://localhost:${PORT}\n`);
+    });
+}
+
+module.exports = app;
