@@ -1,0 +1,10 @@
+node_modules/
+.wwebjs_auth/
+.wwebjs_cache/
+uploads/
+Campaign_Report.json
+Failed_Messages.json
+Failed_Messages_Jobs.json
+qr.png
+.env
+.DS_Store

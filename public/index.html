@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WhatsApp Campaign Manager</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <div class="brand">
+    <span class="brand-logo">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 2a8 8 0 1 1-4.1 14.9l-.3-.2-2.6.7.7-2.5-.2-.3A8 8 0 0 1 12 4zm-3 3.4c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3 2 3.1 4.9 4.2c2.4.9 2.9.8 3.4.7.5 0 1.6-.6 1.8-1.3.2-.6.2-1.2.2-1.3l-.5-.3-1.8-.9c-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-.6-.2-1.6-.6-2.4-1.4-.6-.6-1-1.3-1.2-1.5-.1-.2 0-.4.1-.5l.4-.5.2-.4v-.4l-.8-2c-.2-.5-.4-.4-.6-.4h-.5z"/></svg>
+    </span>
+    <div class="brand-text">
+      <h1>Campaign Manager</h1>
+      <p>Bulk WhatsApp messaging, done right</p>
+    </div>
+  </div>
+  <div class="wa-status">
+    <span class="status-pill"><span id="waDot" class="dot off"></span><span id="waText">Disconnected</span></span>
+    <button id="connectBtn" class="btn small light">Connect WhatsApp</button>
+    <button id="disconnectBtn" class="btn small danger hidden"><svg class="ic" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Disconnect</button>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT COLUMN: configuration -->
+  <section class="col">
+    <!-- Step 1: Data file -->
+    <div class="card">
+      <h2><span class="badge">1</span> Upload Data File</h2>
+      <p class="hint">Excel (.xlsx) or CSV with student names &amp; WhatsApp numbers.</p>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+      <div id="fileInfo" class="file-info hidden"></div>
+      <div id="sheetWrap" class="hidden">
+        <label>Sheet
+          <select id="sheetSelect"></select>
+        </label>
+      </div>
+      <div id="mapWrap" class="hidden grid2">
+        <label>Name column
+          <select id="nameCol"></select>
+        </label>
+        <label>WhatsApp number column
+          <select id="phoneCol"></select>
+        </label>
+        <label>Default country code
+          <input id="countryCode" type="text" value="1" placeholder="e.g. 1, 91" />
+        </label>
+        <label>Limit (0 = all)
+          <input id="limit" type="number" value="0" min="0" />
+        </label>
+      </div>
+      <div id="previewWrap" class="hidden">
+        <h3>Preview</h3>
+        <div class="table-scroll"><table id="previewTable"></table></div>
+      </div>
+    </div>
+
+    <!-- Step 2: Templates -->
+    <div class="card">
+      <h2><span class="badge">2</span> Message Templates</h2>
+      <p class="hint">Use placeholders like <code>{{Name}}</code> — they map to your columns.</p>
+      <select id="templateSelect"><option value="">— New template —</option></select>
+      <input id="tplName" type="text" placeholder="Template name (e.g. First Touch)" />
+      <textarea id="tplBody" rows="4" placeholder="Hey {{Name}}! Hope you're doing well..."></textarea>
+      <div class="row">
+        <button id="saveTplBtn" class="btn"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Save Template</button>
+        <button id="deleteTplBtn" class="btn ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg> Delete</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Message sequence -->
+    <div class="card">
+      <h2><span class="badge">3</span> Message Sequence</h2>
+      <p class="hint">Send multiple messages per contact. First goes up front; each next after a delay.</p>
+      <div id="sequence"></div>
+      <button id="addStepBtn" class="btn ghost">+ Add Message Step</button>
+    </div>
+
+    <!-- Step 4: Safety + launch -->
+    <div class="card">
+      <h2><span class="badge">4</span> Campaign Settings &amp; Launch</h2>
+      <div class="grid2">
+        <label>Min delay between contacts (s)
+          <input id="minDelay" type="number" value="20" min="0" />
+        </label>
+        <label>Max delay between contacts (s)
+          <input id="maxDelay" type="number" value="45" min="0" />
+        </label>
+      </div>
+      <div class="row">
+        <button id="startBtn" class="btn primary" disabled><svg class="ic" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Campaign</button>
+        <button id="stopBtn" class="btn danger hidden"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> Stop</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT COLUMN: live status -->
+  <section class="col">
+    <div class="card" id="qrCard">
+      <h2>WhatsApp Connection</h2>
+      <div id="qrBox" class="qr-box">
+        <p class="hint">Click "Connect WhatsApp" to begin. A QR code will appear here to scan.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Progress</h2>
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <div id="progressText" class="hint">No campaign running.</div>
+      <div class="stats">
+        <div class="stat success"><span id="successCount">0</span><label>Success</label></div>
+        <div class="stat fail"><span id="failCount">0</span><label>Failed</label></div>
+        <div class="stat total"><span id="totalCount">0</span><label>Total</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Reports</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="successList"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Success</button>
+        <button class="tab" data-tab="failList"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Failed</button>
+      </div>
+      <div id="successList" class="report-list"></div>
+      <div id="failList" class="report-list hidden"></div>
+    </div>
+
+    <div class="card">
+      <h2>Live Log</h2>
+      <div id="logBox" class="log-box"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
