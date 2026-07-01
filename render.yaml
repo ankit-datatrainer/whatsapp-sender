@@ -1,0 +1,23 @@
+# Render.com blueprint — deploys the WhatsApp Campaign Manager as an always-on
+# web service (QR scanning works because the process stays alive).
+#
+# How to use:
+#   1. Push this project to a GitHub repo.
+#   2. On render.com: New > Blueprint > pick the repo. Render reads this file.
+#   3. Deploy. Open the service URL, click "Connect WhatsApp", scan the QR.
+services:
+  - type: web
+    name: whatsapp-campaign-manager
+    runtime: docker
+    plan: starter            # starter ($7/mo) stays awake; "free" sleeps after 15 min idle
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium
+      - key: WWEBJS_DATA_PATH
+        value: /data/wwebjs        # store the WhatsApp session on the persistent disk
+    disk:
+      name: wa-session
+      mountPath: /data             # keeps your login across restarts/redeploys
+      sizeGB: 1

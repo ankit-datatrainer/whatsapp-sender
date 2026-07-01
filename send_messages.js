@@ -61,17 +61,17 @@ client.on('ready', async () => {
             const isRegistered = await client.isRegisteredUser(formattedPhone);
             
             if (!isRegistered) {
-                console.log(`❌ Number for ${name} is NOT registered on WhatsApp.`);
+                console.log(`[FAILED] Number for ${name} is NOT registered on WhatsApp.`);
                 failedContacts.push({ name, phone: cleanPhone, reason: 'Not registered on WhatsApp' });
             } else {
                 // Construct the message exactly as requested
                 const message = `Hey ${name}! Hope you're doing well. It's been a while, how's everything going these days?`;
                 
                 await client.sendMessage(formattedPhone, message);
-                console.log(`✅ Message successfully sent to ${name}!`);
+                console.log(`[SUCCESS] Message successfully sent to ${name}!`);
             }
         } catch (err) {
-            console.error(`❌ Failed to send message to ${name}:`, err.message);
+            console.error(`[FAILED] Failed to send message to ${name}:`, err.message);
             failedContacts.push({ name, phone: cleanPhone, reason: `Error: ${err.message}` });
         }
 

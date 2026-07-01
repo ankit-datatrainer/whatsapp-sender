@@ -31,6 +31,7 @@ $('fileInput').addEventListener('change', async (e) => {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     uploaded = data;
+    localStorage.setItem('uploadedData', JSON.stringify(uploaded));
     renderFileInfo();
   } catch (err) {
     $('fileInfo').textContent = 'Error: ' + err.message;
@@ -40,6 +41,8 @@ $('fileInput').addEventListener('change', async (e) => {
 function renderFileInfo() {
   $('fileInfo').innerHTML =
     `<b>${uploaded.fileName}</b> — ${uploaded.rowCount} rows, ${uploaded.columns.length} columns`;
+  $('fileInfo').classList.remove('hidden');
+  $('clearFileBtn').classList.remove('hidden');
   // sheets
   if (uploaded.sheetNames.length > 1) {
     $('sheetWrap').classList.remove('hidden');
@@ -47,8 +50,48 @@ function renderFileInfo() {
   }
   applyColumns(uploaded.columns, uploaded.preview);
   guessMapping();
+  
+  const savedMap = JSON.parse(localStorage.getItem('mapState') || 'null');
+  if (savedMap) {
+    if ($('sheetSelect').options.length > 0 && savedMap.sheet) $('sheetSelect').value = savedMap.sheet;
+    if (savedMap.nameCol) $('nameCol').value = savedMap.nameCol;
+    if (savedMap.phoneCol) $('phoneCol').value = savedMap.phoneCol;
+    if (savedMap.countryCode) $('countryCode').value = savedMap.countryCode;
+    if (savedMap.limit !== undefined) $('limit').value = savedMap.limit;
+  }
   updateStartState();
 }
+
+$('clearFileBtn').addEventListener('click', () => {
+  localStorage.removeItem('uploadedData');
+  localStorage.removeItem('mapState');
+  uploaded = null;
+  $('fileInput').value = '';
+  $('fileInfo').classList.add('hidden');
+  $('clearFileBtn').classList.add('hidden');
+  $('sheetWrap').classList.add('hidden');
+  $('mapWrap').classList.add('hidden');
+  $('previewWrap').classList.add('hidden');
+  updateStartState();
+});
+
+function saveMappings() {
+  if (!uploaded) return;
+  const mapState = {
+    nameCol: $('nameCol').value,
+    phoneCol: $('phoneCol').value,
+    countryCode: $('countryCode').value,
+    limit: $('limit').value,
+    sheet: $('sheetSelect').value
+  };
+  localStorage.setItem('mapState', JSON.stringify(mapState));
+}
+['nameCol', 'phoneCol', 'sheetSelect'].forEach(id => {
+  if ($(id)) $(id).addEventListener('change', saveMappings);
+});
+['countryCode', 'limit'].forEach(id => {
+  if ($(id)) $(id).addEventListener('input', saveMappings);
+});
 
 function applyColumns(columns, preview) {
   $('mapWrap').classList.remove('hidden');
@@ -88,8 +131,10 @@ $('sheetSelect').addEventListener('change', async () => {
   uploaded.columns = data.columns;
   uploaded.rowCount = data.rowCount;
   uploaded.preview = data.preview;
+  localStorage.setItem('uploadedData', JSON.stringify(uploaded));
   applyColumns(data.columns, data.preview);
   guessMapping();
+  saveMappings();
 });
 
 // =================================================================
@@ -154,17 +199,109 @@ function addStep(prefill = {}) {
     <label>Use template
       <select class="stepTpl"><option value="">— custom text —</option></select>
     </label>
-    <textarea class="stepBody" rows="3" placeholder="Message text, e.g. Hey {{Name}}!">${prefill.body || ''}</textarea>
+    <textarea class="stepBody" rows="3" placeholder="Message text, e.g. Hey {{Name}} or [Name]!">${prefill.body || ''}</textarea>
+    <div class="step-actions" style="margin-top: 8px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn small ghost save-new-tpl-btn hidden" style="padding: 4px 12px; font-size: 12px;">Save as New Template</button>
+        <button class="btn small ghost save-tpl-btn hidden" style="padding: 4px 12px; font-size: 12px;">Update Template</button>
+    </div>
   `;
   $('sequence').appendChild(div);
   div.querySelector('.rm').addEventListener('click', () => { div.remove(); renumberSteps(); });
+  
   const tplSel = div.querySelector('.stepTpl');
+  const bodyText = div.querySelector('.stepBody');
+  const saveNewBtn = div.querySelector('.save-new-tpl-btn');
+  const updateBtn = div.querySelector('.save-tpl-btn');
+
+  function checkSaveBtn() {
+    const text = bodyText.value.trim();
+    if (text === '') {
+        saveNewBtn.classList.add('hidden');
+        updateBtn.classList.add('hidden');
+        return;
+    }
+    if (tplSel.value) {
+        saveNewBtn.classList.add('hidden');
+        const t = templates.find(x => x.id === tplSel.value);
+        if (t && t.body !== bodyText.value) {
+            updateBtn.classList.remove('hidden');
+        } else {
+            updateBtn.classList.add('hidden');
+        }
+    } else {
+        saveNewBtn.classList.remove('hidden');
+        updateBtn.classList.add('hidden');
+    }
+  }
+
   tplSel.addEventListener('change', () => {
     const t = templates.find(x => x.id === tplSel.value);
-    if (t) div.querySelector('.stepBody').value = t.body;
+    if (t) {
+        bodyText.value = t.body;
+    }
+    checkSaveBtn();
   });
+
+  bodyText.addEventListener('input', checkSaveBtn);
+
+  saveNewBtn.addEventListener('click', async () => {
+    const name = prompt('Enter a name for this new template:');
+    if (!name) return;
+    const prevText = saveNewBtn.textContent;
+    saveNewBtn.textContent = 'Saving...';
+    saveNewBtn.disabled = true;
+    try {
+        templates = await (await fetch('/api/templates', {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, body: bodyText.value }),
+        })).json();
+        renderTemplateSelect();
+        // The last item is our new template
+        const newTpl = templates[templates.length - 1];
+        tplSel.value = newTpl.id;
+        saveNewBtn.textContent = 'Saved!';
+        setTimeout(() => {
+            saveNewBtn.textContent = prevText;
+            saveNewBtn.disabled = false;
+            checkSaveBtn();
+        }, 1500);
+    } catch (err) {
+        alert('Failed: ' + err.message);
+        saveNewBtn.textContent = prevText;
+        saveNewBtn.disabled = false;
+    }
+  });
+
+  updateBtn.addEventListener('click', async () => {
+    const t = templates.find(x => x.id === tplSel.value);
+    if (!t) return;
+    const prevText = updateBtn.textContent;
+    updateBtn.textContent = 'Saving...';
+    updateBtn.disabled = true;
+    try {
+        templates = await (await fetch('/api/templates', {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: t.id, name: t.name, body: bodyText.value }),
+        })).json();
+        renderTemplateSelect();
+        updateBtn.textContent = 'Saved!';
+        setTimeout(() => {
+            updateBtn.textContent = prevText;
+            updateBtn.disabled = false;
+            checkSaveBtn();
+        }, 1500);
+    } catch (err) {
+        alert('Failed: ' + err.message);
+        updateBtn.textContent = prevText;
+        updateBtn.disabled = false;
+    }
+  });
+
   refreshStepTemplateDropdowns();
   renumberSteps();
+  checkSaveBtn();
 }
 function renumberSteps() {
   document.querySelectorAll('#sequence .step').forEach((s, i) => {
@@ -194,7 +331,10 @@ $('addStepBtn').addEventListener('click', () => addStep());
 // =================================================================
 // STEP 4 — Connect & launch
 // =================================================================
+const shouldAutoConnect = localStorage.getItem('waAutoConnect') === 'true';
+
 $('connectBtn').addEventListener('click', () => {
+  localStorage.setItem('waAutoConnect', 'true');
   // Disable button to prevent double-clicks while reconnecting
   $('connectBtn').disabled = true;
   $('connectBtn').textContent = 'Connecting...';
@@ -254,7 +394,21 @@ document.querySelectorAll('.tab').forEach(tab => {
 // =================================================================
 // Socket events
 // =================================================================
-socket.on('status', (s) => { if (s.waReady) markReady(); });
+socket.on('status', (s) => { 
+  if (s.waReady) {
+    markReady(); 
+  } else if (s.waInitializing) {
+    $('connectBtn').disabled = true;
+    $('connectBtn').textContent = 'Initializing...';
+    $('waLogoutBtn').classList.remove('hidden'); // allow aborting
+    $('qrBox').innerHTML = '<p class="hint">WhatsApp is currently initializing, please wait...</p>';
+  } else if (shouldAutoConnect) {
+    $('connectBtn').disabled = true;
+    $('connectBtn').textContent = 'Auto-connecting...';
+    socket.emit('connect-whatsapp');
+    $('qrBox').innerHTML = '<p class="hint">Auto-connecting to saved session...</p>';
+  }
+});
 socket.on('qr', (dataUrl) => { $('qrBox').innerHTML = `<img src="${dataUrl}" alt="QR" />`; });
 socket.on('wa-ready', markReady);
 function markReady() {
@@ -266,7 +420,7 @@ function markReady() {
   $('connectBtn').disabled = false;
   $('connectBtn').textContent = 'Connect WhatsApp';
   $('disconnectBtn').classList.remove('hidden');
-  $('logoutBtn').classList.remove('hidden');
+  $('waLogoutBtn').classList.remove('hidden');
   updateStartState();
 }
 socket.on('wa-disconnected', () => {
@@ -277,23 +431,30 @@ socket.on('wa-disconnected', () => {
   $('connectBtn').disabled = false;
   $('connectBtn').textContent = 'Connect WhatsApp';
   $('disconnectBtn').classList.add('hidden');
-  $('logoutBtn').classList.add('hidden');
+  $('waLogoutBtn').classList.add('hidden');
   $('qrBox').innerHTML = '<p class="hint">Disconnected. Click "Connect WhatsApp" to start a new session.</p>';
   updateStartState();
 });
 
 // Disconnect: keeps the saved session so reconnecting is instant.
 $('disconnectBtn').addEventListener('click', () => {
+  localStorage.removeItem('waAutoConnect');
   socket.emit('disconnect-whatsapp', { logout: false });
   $('disconnectBtn').classList.add('hidden');
-  $('logoutBtn').classList.add('hidden');
+  $('waLogoutBtn').classList.add('hidden');
   $('waText').textContent = 'Disconnecting...';
 });
 
-// Logout: clears the saved session — next connect will require a fresh QR scan.
-$('logoutBtn').addEventListener('click', () => {
-  if (!confirm('Log out and clear the saved session?\n\nYou will need to scan a new QR code next time.')) return;
+// waLogoutBtn: clears the WhatsApp saved session — next connect will require a fresh QR scan.
+$('waLogoutBtn').addEventListener('click', () => {
+  if (!confirm('Forget WhatsApp session?\n\nYou will need to scan a new QR code next time.')) return;
+  localStorage.removeItem('waAutoConnect');
   socket.emit('disconnect-whatsapp', { logout: true });
+});
+
+// appLogoutBtn: logs out of the web dashboard entirely
+$('appLogoutBtn').addEventListener('click', () => {
+  if (!confirm('Are you sure you want to log out of the dashboard?')) return;
   document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   window.location.href = '/';
 });
@@ -353,3 +514,13 @@ socket.on('log', ({ time, message, level }) => {
 // ---------- Init ----------
 loadTemplates();
 addStep({ body: "Hey {{Name}}! Hope you're doing well." });
+
+const savedData = localStorage.getItem('uploadedData');
+if (savedData) {
+  try {
+    uploaded = JSON.parse(savedData);
+    renderFileInfo();
+  } catch (e) {
+    console.error('Failed to parse saved file data', e);
+  }
+}

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WhatsApp Campaign Manager | Login</title>
 <link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
 <style>
   /* Landing Page specific styles */
@@ -15,15 +18,17 @@
     margin: 0 auto;
   }
   .hero h1 {
+    font-family: var(--font-display, 'Outfit', sans-serif);
     font-size: clamp(32px, 5vw, 56px);
     font-weight: 800;
     line-height: 1.15;
     margin-bottom: 20px;
-    background: linear-gradient(135deg, var(--wa-green), var(--wa-teal));
+    background: linear-gradient(135deg, var(--primary-l, #34D399), var(--primary, #10B981));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -1px;
-  }
+    color: var(--ink, #fff); /* fallback */
+  }.accent { color: var(--wa-green); }  /* green highlight for "WhatsApp" */
   .hero p {
     font-size: clamp(16px, 2vw, 20px);
     color: var(--ink-soft);
@@ -39,7 +44,7 @@
     padding: 0 20px;
   }
   .feature-card {
-    background: var(--wa-panel);
+    background: var(--bg-surface, #131B2C);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 30px;
@@ -54,9 +59,9 @@
   .feature-card .ic {
     width: 48px;
     height: 48px;
-    color: var(--wa-teal-2);
+    color: var(--primary-l, #34d399);
     margin-bottom: 20px;
-    background: rgba(0, 168, 132, 0.1);
+    background: var(--primary-bg, rgba(16, 185, 129, 0.1));
     padding: 10px;
     border-radius: 12px;
   }
@@ -75,7 +80,7 @@
     text-align: center;
     padding: 40px 20px;
     border-top: 1px solid var(--line);
-    background: var(--wa-panel-2);
+    background: var(--bg-surface-2, #1E293B);
     color: var(--muted);
     font-size: 14px;
     display: flex;
@@ -103,7 +108,7 @@
     visibility: visible;
   }
   .login-modal {
-    background: var(--wa-panel);
+    background: var(--bg-surface, #131B2C);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 40px;
@@ -142,15 +147,39 @@
     color: var(--ink);
   }
   #loginError {
-    color: var(--red);
+    color: var(--danger, #EF4444);
     font-size: 13px;
     text-align: center;
     margin-top: 14px;
     font-weight: 500;
     display: none;
-    background: rgba(241, 92, 109, 0.1);
+    background: var(--danger-bg, rgba(239, 68, 68, 0.1));
     padding: 8px;
     border-radius: 8px;
+  }
+  .pwd-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .pwd-wrapper input {
+    width: 100%;
+    padding-right: 40px;
+  }
+  .toggle-pwd-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .toggle-pwd-btn:hover {
+    color: var(--ink);
   }
 </style>
 </head>
@@ -171,7 +200,7 @@
 </header>
 
 <div class="hero">
-  <h1>Reach your audience directly on WhatsApp</h1>
+  <h1>Reach your audience directly on <span class="accent">WhatsApp</span></h1>
   <p>The premium bulk messaging tool for academies and businesses. Upload your contacts, craft personalized templates, and send campaigns with real-time progress tracking.</p>
   <button class="btn primary" style="font-size: 16px; padding: 14px 32px; border-radius: 99px;" onclick="openLogin()">Get Started Now</button>
 </div>
@@ -213,7 +242,13 @@
       <input type="email" id="loginId" placeholder="support@ankitkumaracademy.com" required />
       
       <label for="loginPwd" style="margin-top:20px;">Password</label>
-      <input type="password" id="loginPwd" placeholder="••••••••" required />
+      <div class="pwd-wrapper">
+        <input type="password" id="loginPwd" placeholder="••••••••" required />
+        <button type="button" class="toggle-pwd-btn" id="togglePwd" title="Show password">
+          <svg class="ic eye-open" viewBox="0 0 24 24" style="display:none;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="ic eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
       
       <button type="submit" class="btn primary" style="width: 100%; justify-content: center; margin-top: 28px; padding: 13px;">Login</button>
       <div id="loginError">Invalid credentials. Please try again.</div>
@@ -225,6 +260,24 @@
   const modal = document.getElementById('loginModal');
   const loginForm = document.getElementById('loginForm');
   const loginError = document.getElementById('loginError');
+  const togglePwdBtn = document.getElementById('togglePwd');
+  const loginPwdInput = document.getElementById('loginPwd');
+  const eyeOpenIcon = togglePwdBtn.querySelector('.eye-open');
+  const eyeOffIcon = togglePwdBtn.querySelector('.eye-off');
+
+  togglePwdBtn.addEventListener('click', () => {
+    if (loginPwdInput.type === 'password') {
+      loginPwdInput.type = 'text';
+      eyeOpenIcon.style.display = 'block';
+      eyeOffIcon.style.display = 'none';
+      togglePwdBtn.title = 'Hide password';
+    } else {
+      loginPwdInput.type = 'password';
+      eyeOpenIcon.style.display = 'none';
+      eyeOffIcon.style.display = 'block';
+      togglePwdBtn.title = 'Show password';
+    }
+  });
 
   function openLogin() {
     modal.classList.add('active');

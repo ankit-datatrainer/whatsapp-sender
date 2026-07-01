@@ -136,6 +136,7 @@ app.post('/api/sheet', (req, res) => {
 // ---------- WhatsApp client / campaign engine ----------
 let waClient = null;
 let waReady = false;
+let waInitializing = false;
 let campaignRunning = false;
 let stopRequested = false;
 
@@ -171,7 +172,8 @@ function cleanPhone(raw, defaultCountryCode) {
 }
 
 function fillTemplate(body, row) {
-    return body.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, key) => {
+    return body.replace(/(?:\{\{\s*([^}]+?)\s*\}\})|(?:\[\s*([^\]]+?)\s*\])/g, (_, key1, key2) => {
+        const key = key1 || key2;
         const k = Object.keys(row).find(c => c.toLowerCase() === key.toLowerCase());
         return k ? String(row[k]) : '';
     });
@@ -197,6 +199,10 @@ async function destroyExistingClient({ logout = false } = {}) {
 }
 
 async function initWhatsApp() {
+    if (waInitializing) return;
+    waInitializing = true;
+    io.emit('status', { waReady, waInitializing, campaignRunning });
+
     // Always tear down any previous client first so we get a fresh QR.
     if (waClient) {
         log('Disconnecting previous WhatsApp session before reconnecting...', 'warn');
@@ -255,8 +261,10 @@ async function initWhatsApp() {
 
     waClient.on('ready', () => {
         waReady = true;
+        waInitializing = false;
         clearTimeout(readyTimer);
         io.emit('wa-ready');
+        io.emit('status', { waReady, waInitializing, campaignRunning });
         log('WhatsApp client is ready and authenticated!', 'success');
     });
 
@@ -264,11 +272,15 @@ async function initWhatsApp() {
         log('Authentication failure: ' + msg, 'error');
         io.emit('wa-auth-failure');
         waClient = null;
+        waInitializing = false;
+        io.emit('status', { waReady, waInitializing, campaignRunning });
     });
 
     waClient.on('disconnected', (reason) => {
         waReady = false;
+        waInitializing = false;
         io.emit('wa-disconnected');
+        io.emit('status', { waReady, waInitializing, campaignRunning });
         log('WhatsApp client disconnected: ' + reason, 'error');
         waClient = null;
     });
@@ -277,6 +289,8 @@ async function initWhatsApp() {
         log('Failed to start WhatsApp client: ' + err.message, 'error');
         io.emit('wa-error', err.message);
         waClient = null;
+        waInitializing = false;
+        io.emit('status', { waReady, waInitializing, campaignRunning });
     });
 }
 
@@ -366,11 +380,13 @@ async function runCampaign(config) {
 
 // ---------- Socket events ----------
 io.on('connection', (socket) => {
-    socket.emit('status', { waReady, campaignRunning });
+    socket.emit('status', { waReady, waInitializing, campaignRunning });
 
     // Connect always tears down any previous client, then starts fresh.
     socket.on('connect-whatsapp', () => {
-        initWhatsApp();
+        if (!waInitializing) {
+            initWhatsApp();
+        }
     });
 
     socket.on('start-campaign', (config) => {
@@ -389,19 +405,39 @@ io.on('connection', (socket) => {
     // Disconnect: keep session by default so next Connect is instant.
     // Pass { logout: true } to clear the saved session (forces fresh QR next time).
     socket.on('disconnect-whatsapp', async ({ logout } = {}) => {
-        if (!waClient) {
-            io.emit('wa-disconnected');
-            return;
-        }
+        waAutoConnect = false;
+        
         if (campaignRunning) {
             stopRequested = true;
             log('Stopping running campaign before disconnecting...', 'warn');
         }
-        log(logout ? 'Logging out of WhatsApp (clearing saved session)...'
-                   : 'Disconnecting from WhatsApp (session preserved)...');
-        await destroyExistingClient({ logout: !!logout });
+        
+        try {
+            if (waClient) {
+                // If we are stuck initializing, logout() can hang forever, so we just destroy
+                if (logout && waReady) {
+                    await waClient.logout().catch(e => log('Logout error (ignoring): ' + e.message));
+                }
+                await waClient.destroy().catch(e => log('Destroy error (ignoring): ' + e.message));
+            }
+        } catch (e) {
+            log('Error disconnecting WhatsApp: ' + e.message, 'error');
+        }
+        
+        if (logout) {
+            // Forcefully delete the session folder to guarantee a clean slate
+            const authPath = path.join(__dirname, '.wwebjs_auth');
+            if (fs.existsSync(authPath)) {
+                fs.rmSync(authPath, { recursive: true, force: true });
+                log('Deleted corrupted or old .wwebjs_auth session folder.', 'info');
+            }
+        }
+        
+        waClient = null;
+        waReady = false;
+        waInitializing = false;
+        log('WhatsApp disconnected.', 'warn');
         io.emit('wa-disconnected');
-        log('Disconnected from WhatsApp.', 'warn');
     });
 });
 

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WhatsApp Campaign Manager</title>
 <link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -22,7 +25,9 @@
     <span class="status-pill"><span id="waDot" class="dot off"></span><span id="waText">Disconnected</span></span>
     <button id="connectBtn" class="btn small light">Connect WhatsApp</button>
     <button id="disconnectBtn" class="btn small danger hidden"><svg class="ic" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Disconnect</button>
-    <button id="logoutBtn" class="btn small ghost hidden" title="Clear saved session & scan new QR"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</button>
+    <button id="waLogoutBtn" class="btn small ghost hidden" title="Clear saved session & scan new QR"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Forget Session</button>
+    <div style="width: 1px; height: 24px; background: var(--border); margin: 0 8px;"></div>
+    <button id="appLogoutBtn" class="btn small ghost" title="Log out of Dashboard">Log Out</button>
   </div>
 </header>
 
@@ -34,6 +39,7 @@
       <h2><span class="badge">1</span> Upload Data File</h2>
       <p class="hint">Excel (.xlsx) or CSV with student names &amp; WhatsApp numbers.</p>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+      <button id="clearFileBtn" class="btn small ghost hidden" style="margin-left: 8px;">Clear File</button>
       <div id="fileInfo" class="file-info hidden"></div>
       <div id="sheetWrap" class="hidden">
         <label>Sheet
@@ -99,8 +105,8 @@
     </div>
   </section>
 
-  <!-- RIGHT COLUMN: live status -->
-  <section class="col">
+  <!-- RIGHT COLUMN: live status (Sticky) -->
+  <section class="col sticky-col">
     <div class="card" id="qrCard">
       <h2>WhatsApp Connection</h2>
       <div id="qrBox" class="qr-box">

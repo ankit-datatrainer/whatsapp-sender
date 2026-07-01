@@ -9,7 +9,10 @@
       "Bash(curl -s -o /dev/null http://localhost:3000/)",
       "Bash(xargs echo \"dark-accent tokens:\")",
       "Bash(curl -s http://localhost:3000/index.html)",
-      "Bash(xargs echo \"disconnect button:\")"
+      "Bash(xargs echo \"disconnect button:\")",
+      "Bash(docker --version)",
+      "Bash(docker build *)",
+      "Bash(curl -s http://localhost:3000/)"
     ]
   }
 }

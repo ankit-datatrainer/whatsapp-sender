@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.wwebjs_auth
+.wwebjs_cache
+uploads
+*.log
+Failed_Messages*.json
+Campaign_Report.json
+.git
+.gitignore
+qr.png
