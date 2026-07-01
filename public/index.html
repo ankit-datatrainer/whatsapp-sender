@@ -3,10 +3,159 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WhatsApp Campaign Manager</title>
+<title>WhatsApp Campaign Manager | Login</title>
+<link rel="icon" type="image/png" href="favicon.png" />
 <link rel="stylesheet" href="style.css" />
+<style>
+  /* Landing Page specific styles */
+  .hero {
+    text-align: center;
+    padding: 80px 20px 40px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--wa-green), var(--wa-teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+  }
+  .hero p {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--ink-soft);
+    margin-bottom: 40px;
+    line-height: 1.6;
+  }
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto 80px;
+    padding: 0 20px;
+  }
+  .feature-card {
+    background: var(--wa-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 30px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+  .feature-card .ic {
+    width: 48px;
+    height: 48px;
+    color: var(--wa-teal-2);
+    margin-bottom: 20px;
+    background: rgba(0, 168, 132, 0.1);
+    padding: 10px;
+    border-radius: 12px;
+  }
+  .feature-card h3 {
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .feature-card p {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid var(--line);
+    background: var(--wa-panel-2);
+    color: var(--muted);
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(11, 20, 26, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.3s ease;
+  }
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+  .login-modal {
+    background: var(--wa-panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 40px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(20px);
+    transition: 0.3s ease;
+    position: relative;
+  }
+  .modal-overlay.active .login-modal {
+    transform: translateY(0);
+  }
+  .login-modal h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: var(--ink);
+    text-align: center;
+  }
+  .login-modal p.hint {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .login-modal .close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+  }
+  .login-modal .close-btn:hover {
+    color: var(--ink);
+  }
+  #loginError {
+    color: var(--red);
+    font-size: 13px;
+    text-align: center;
+    margin-top: 14px;
+    font-weight: 500;
+    display: none;
+    background: rgba(241, 92, 109, 0.1);
+    padding: 8px;
+    border-radius: 8px;
+  }
+</style>
 </head>
 <body>
+
 <header>
   <div class="brand">
     <span class="brand-logo">
@@ -14,127 +163,123 @@
     </span>
     <div class="brand-text">
       <h1>Campaign Manager</h1>
-      <p>Bulk WhatsApp messaging, done right</p>
     </div>
   </div>
-  <div class="wa-status">
-    <span class="status-pill"><span id="waDot" class="dot off"></span><span id="waText">Disconnected</span></span>
-    <button id="connectBtn" class="btn small light">Connect WhatsApp</button>
-    <button id="disconnectBtn" class="btn small danger hidden"><svg class="ic" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> Disconnect</button>
+  <div>
+    <button class="btn light" onclick="openLogin()">Login to Dashboard</button>
   </div>
 </header>
 
-<main>
-  <!-- LEFT COLUMN: configuration -->
-  <section class="col">
-    <!-- Step 1: Data file -->
-    <div class="card">
-      <h2><span class="badge">1</span> Upload Data File</h2>
-      <p class="hint">Excel (.xlsx) or CSV with student names &amp; WhatsApp numbers.</p>
-      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
-      <div id="fileInfo" class="file-info hidden"></div>
-      <div id="sheetWrap" class="hidden">
-        <label>Sheet
-          <select id="sheetSelect"></select>
-        </label>
-      </div>
-      <div id="mapWrap" class="hidden grid2">
-        <label>Name column
-          <select id="nameCol"></select>
-        </label>
-        <label>WhatsApp number column
-          <select id="phoneCol"></select>
-        </label>
-        <label>Default country code
-          <input id="countryCode" type="text" value="1" placeholder="e.g. 1, 91" />
-        </label>
-        <label>Limit (0 = all)
-          <input id="limit" type="number" value="0" min="0" />
-        </label>
-      </div>
-      <div id="previewWrap" class="hidden">
-        <h3>Preview</h3>
-        <div class="table-scroll"><table id="previewTable"></table></div>
-      </div>
-    </div>
+<div class="hero">
+  <h1>Reach your audience directly on WhatsApp</h1>
+  <p>The premium bulk messaging tool for academies and businesses. Upload your contacts, craft personalized templates, and send campaigns with real-time progress tracking.</p>
+  <button class="btn primary" style="font-size: 16px; padding: 14px 32px; border-radius: 99px;" onclick="openLogin()">Get Started Now</button>
+</div>
 
-    <!-- Step 2: Templates -->
-    <div class="card">
-      <h2><span class="badge">2</span> Message Templates</h2>
-      <p class="hint">Use placeholders like <code>{{Name}}</code> — they map to your columns.</p>
-      <select id="templateSelect"><option value="">— New template —</option></select>
-      <input id="tplName" type="text" placeholder="Template name (e.g. First Touch)" />
-      <textarea id="tplBody" rows="4" placeholder="Hey {{Name}}! Hope you're doing well..."></textarea>
-      <div class="row">
-        <button id="saveTplBtn" class="btn"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Save Template</button>
-        <button id="deleteTplBtn" class="btn ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg> Delete</button>
-      </div>
-    </div>
+<div class="features">
+  <div class="feature-card">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <h3>Bulk Data Upload</h3>
+    <p>Seamlessly upload Excel or CSV files. We automatically map columns so you can personalize your messages instantly.</p>
+  </div>
+  <div class="feature-card">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    <h3>Personalized Templates</h3>
+    <p>Create and save unlimited message templates. Use dynamic placeholders like <code>{{Name}}</code> to make every message feel 1-on-1.</p>
+  </div>
+  <div class="feature-card">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    <h3>Live Tracking</h3>
+    <p>Watch your campaign run in real-time. Track successes, failures, and view detailed live logs right from your dashboard.</p>
+  </div>
+</div>
 
-    <!-- Step 3: Message sequence -->
-    <div class="card">
-      <h2><span class="badge">3</span> Message Sequence</h2>
-      <p class="hint">Send multiple messages per contact. First goes up front; each next after a delay.</p>
-      <div id="sequence"></div>
-      <button id="addStepBtn" class="btn ghost">+ Add Message Step</button>
-    </div>
+<footer>
+  <p>© 2026 Ankit Kumar Academy. All rights reserved.</p>
+  <button class="btn ghost small" onclick="openLogin()">Staff Login</button>
+</footer>
 
-    <!-- Step 4: Safety + launch -->
-    <div class="card">
-      <h2><span class="badge">4</span> Campaign Settings &amp; Launch</h2>
-      <div class="grid2">
-        <label>Min delay between contacts (s)
-          <input id="minDelay" type="number" value="20" min="0" />
-        </label>
-        <label>Max delay between contacts (s)
-          <input id="maxDelay" type="number" value="45" min="0" />
-        </label>
-      </div>
-      <div class="row">
-        <button id="startBtn" class="btn primary" disabled><svg class="ic" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Start Campaign</button>
-        <button id="stopBtn" class="btn danger hidden"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> Stop</button>
-      </div>
-    </div>
-  </section>
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginModal">
+  <div class="login-modal">
+    <button class="close-btn" onclick="closeLogin()" title="Close">
+      <svg class="ic" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2>Welcome Back</h2>
+    <p class="hint">Please enter your staff credentials to access the campaign manager.</p>
+    
+    <form id="loginForm">
+      <label for="loginId">Email ID</label>
+      <input type="email" id="loginId" placeholder="support@ankitkumaracademy.com" required />
+      
+      <label for="loginPwd" style="margin-top:20px;">Password</label>
+      <input type="password" id="loginPwd" placeholder="••••••••" required />
+      
+      <button type="submit" class="btn primary" style="width: 100%; justify-content: center; margin-top: 28px; padding: 13px;">Login</button>
+      <div id="loginError">Invalid credentials. Please try again.</div>
+    </form>
+  </div>
+</div>
 
-  <!-- RIGHT COLUMN: live status -->
-  <section class="col">
-    <div class="card" id="qrCard">
-      <h2>WhatsApp Connection</h2>
-      <div id="qrBox" class="qr-box">
-        <p class="hint">Click "Connect WhatsApp" to begin. A QR code will appear here to scan.</p>
-      </div>
-    </div>
+<script>
+  const modal = document.getElementById('loginModal');
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
 
-    <div class="card">
-      <h2>Progress</h2>
-      <div class="progress-bar"><div id="progressFill"></div></div>
-      <div id="progressText" class="hint">No campaign running.</div>
-      <div class="stats">
-        <div class="stat success"><span id="successCount">0</span><label>Success</label></div>
-        <div class="stat fail"><span id="failCount">0</span><label>Failed</label></div>
-        <div class="stat total"><span id="totalCount">0</span><label>Total</label></div>
-      </div>
-    </div>
+  function openLogin() {
+    modal.classList.add('active');
+    setTimeout(() => {
+      document.getElementById('loginId').focus();
+    }, 100);
+  }
+  
+  function closeLogin() {
+    modal.classList.remove('active');
+    loginError.style.display = 'none';
+  }
 
-    <div class="card">
-      <h2>Reports</h2>
-      <div class="tabs">
-        <button class="tab active" data-tab="successList"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Success</button>
-        <button class="tab" data-tab="failList"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Failed</button>
-      </div>
-      <div id="successList" class="report-list"></div>
-      <div id="failList" class="report-list hidden"></div>
-    </div>
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeLogin();
+  });
 
-    <div class="card">
-      <h2>Live Log</h2>
-      <div id="logBox" class="log-box"></div>
-    </div>
-  </section>
-</main>
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.style.display = 'none';
+    
+    const id = document.getElementById('loginId').value.trim();
+    const password = document.getElementById('loginPwd').value.trim();
+    
+    try {
+      const btn = loginForm.querySelector('button[type="submit"]');
+      const originalText = btn.textContent;
+      btn.textContent = 'Logging in...';
+      btn.disabled = true;
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        window.location.href = '/dashboard.html';
+      } else {
+        loginError.textContent = data.error || 'Invalid credentials';
+        loginError.style.display = 'block';
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      loginError.textContent = 'Connection error. Please try again.';
+      loginError.style.display = 'block';
+      const btn = loginForm.querySelector('button[type="submit"]');
+      btn.textContent = 'Login';
+      btn.disabled = false;
+    }
+  });
+</script>
+
 </body>
 </html>

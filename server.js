@@ -6,6 +6,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const multer = require('multer');
+const cookieParser = require('cookie-parser');
 const xlsx = require('xlsx');
 const QRCode = require('qrcode');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
@@ -27,7 +28,31 @@ const REPORT_FILE = path.join(DATA_ROOT, 'Campaign_Report.json');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 app.use(express.json());
+app.use(cookieParser());
+
+// Protected routes middleware
+app.use((req, res, next) => {
+    if (req.path === '/dashboard.html') {
+        if (req.cookies && req.cookies.auth === 'true') {
+            return next();
+        } else {
+            return res.redirect('/');
+        }
+    }
+    next();
+});
+
 app.use(express.static(path.join(ROOT, 'public')));
+
+// ---------- Auth endpoint ----------
+app.post('/api/login', (req, res) => {
+    const { id, password } = req.body;
+    if (id === 'support@ankitkumaracademy.com' && password === 'Kumar@20.26') {
+        res.cookie('auth', 'true', { maxAge: 24 * 60 * 60 * 1000, httpOnly: false }); // httpOnly: false allows client JS to check if logged in (optional)
+        return res.json({ success: true });
+    }
+    res.status(401).json({ success: false, error: 'Invalid ID or Password' });
+});
 
 // ---------- File uploads ----------
 const upload = multer({
@@ -119,10 +144,17 @@ function log(socketMsg, level = 'info') {
     io.emit('log', { time: new Date().toLocaleTimeString(), message: socketMsg, level });
 }
 
-// Locate an installed Chrome/Edge to use instead of bundled chromium (more reliable on Windows)
+// Locate an installed Chrome/Chromium/Edge to use instead of bundled chromium.
+// Works on Windows (local dev) and Linux (Docker / Render / Railway / VPS).
 function findChrome() {
     const candidates = [
-        process.env.PUPPETEER_EXECUTABLE_PATH,
+        process.env.PUPPETEER_EXECUTABLE_PATH,      // set this in Docker / hosting env
+        // Linux (Docker, Render, Railway, VPS)
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        // Windows (local dev)
         'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
         'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
         'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -147,11 +179,33 @@ function fillTemplate(body, row) {
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-function initWhatsApp() {
-    if (waClient) {
-        log('WhatsApp client already initializing/connected.', 'warn');
-        return;
+// Tear down any existing client cleanly, swallowing EBUSY lock errors.
+async function destroyExistingClient({ logout = false } = {}) {
+    if (!waClient) return;
+    const oldClient = waClient;
+    waClient = null;
+    waReady = false;
+    try {
+        if (logout) {
+            await oldClient.logout().catch(() => {});
+        }
+        await oldClient.destroy().catch(() => {});
+    } catch (err) {
+        // EBUSY errors happen on Windows when Chrome still holds DB files — safe to ignore.
+        log('Cleanup notice: ' + err.message, 'warn');
     }
+}
+
+async function initWhatsApp() {
+    // Always tear down any previous client first so we get a fresh QR.
+    if (waClient) {
+        log('Disconnecting previous WhatsApp session before reconnecting...', 'warn');
+        await destroyExistingClient({ logout: false });
+        io.emit('wa-disconnected');
+        // Small pause to let Chrome release file handles on Windows.
+        await sleep(1500);
+    }
+
     log('Initializing WhatsApp client... (this can take 10-30s)');
 
     const chromePath = findChrome();
@@ -167,10 +221,8 @@ function initWhatsApp() {
     }
 
     waClient = new Client({
-        authStrategy: new LocalAuth(),
+        authStrategy: new LocalAuth({ dataPath: process.env.WWEBJS_DATA_PATH || undefined }),
         puppeteer: puppeteerOpts,
-        // No pinned webVersionCache: load the live current WhatsApp Web version.
-        // Pinning an old version causes the client to hang after 'authenticated'.
     });
 
     // Safety net: if 'ready' never fires after authentication, warn the user.
@@ -198,7 +250,7 @@ function initWhatsApp() {
     });
 
     waClient.on('authenticated', () => {
-        log('Authenticated. Finalizing connection...', 'success');
+        log('Authenticated. Session saved for future reconnects.', 'success');
     });
 
     waClient.on('ready', () => {
@@ -316,8 +368,8 @@ async function runCampaign(config) {
 io.on('connection', (socket) => {
     socket.emit('status', { waReady, campaignRunning });
 
+    // Connect always tears down any previous client, then starts fresh.
     socket.on('connect-whatsapp', () => {
-        if (waReady) return socket.emit('wa-ready');
         initWhatsApp();
     });
 
@@ -334,6 +386,8 @@ io.on('connection', (socket) => {
         stopRequested = true;
     });
 
+    // Disconnect: keep session by default so next Connect is instant.
+    // Pass { logout: true } to clear the saved session (forces fresh QR next time).
     socket.on('disconnect-whatsapp', async ({ logout } = {}) => {
         if (!waClient) {
             io.emit('wa-disconnected');
@@ -343,22 +397,11 @@ io.on('connection', (socket) => {
             stopRequested = true;
             log('Stopping running campaign before disconnecting...', 'warn');
         }
-        try {
-            log(logout ? 'Logging out of WhatsApp (clearing saved session)...'
-                       : 'Disconnecting from WhatsApp...');
-            // logout() clears the LocalAuth session so the next connect needs a fresh QR.
-            if (logout) {
-                await waClient.logout().catch(() => {});
-            }
-            await waClient.destroy().catch(() => {});
-        } catch (err) {
-            log('Error while disconnecting: ' + err.message, 'error');
-        } finally {
-            waClient = null;
-            waReady = false;
-            io.emit('wa-disconnected');
-            log('Disconnected from WhatsApp.', 'warn');
-        }
+        log(logout ? 'Logging out of WhatsApp (clearing saved session)...'
+                   : 'Disconnecting from WhatsApp (session preserved)...');
+        await destroyExistingClient({ logout: !!logout });
+        io.emit('wa-disconnected');
+        log('Disconnected from WhatsApp.', 'warn');
     });
 });
 

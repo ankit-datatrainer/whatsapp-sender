@@ -195,8 +195,11 @@ $('addStepBtn').addEventListener('click', () => addStep());
 // STEP 4 — Connect & launch
 // =================================================================
 $('connectBtn').addEventListener('click', () => {
+  // Disable button to prevent double-clicks while reconnecting
+  $('connectBtn').disabled = true;
+  $('connectBtn').textContent = 'Connecting...';
   socket.emit('connect-whatsapp');
-  $('qrBox').innerHTML = '<p class="hint">Starting browser & connecting... If you have a saved session this can take up to a minute. A QR code appears here only if you need to log in again.</p>';
+  $('qrBox').innerHTML = '<p class="hint">Disconnecting previous session & starting fresh... A QR code will appear shortly.</p>';
 });
 
 let waReady = false;
@@ -258,9 +261,12 @@ function markReady() {
   waReady = true;
   $('waDot').className = 'dot on';
   $('waText').textContent = 'Connected';
-  $('qrBox').innerHTML = '<p class="hint" style="color:var(--wa-green)">Connected &amp; authenticated. You can start a campaign.</p>';
+  $('qrBox').innerHTML = '<p class="hint" style="color:var(--wa-green)">Connected &amp; authenticated. Session saved. You can start a campaign.</p>';
   $('connectBtn').classList.add('hidden');
+  $('connectBtn').disabled = false;
+  $('connectBtn').textContent = 'Connect WhatsApp';
   $('disconnectBtn').classList.remove('hidden');
+  $('logoutBtn').classList.remove('hidden');
   updateStartState();
 }
 socket.on('wa-disconnected', () => {
@@ -268,17 +274,28 @@ socket.on('wa-disconnected', () => {
   $('waDot').className = 'dot off';
   $('waText').textContent = 'Disconnected';
   $('connectBtn').classList.remove('hidden');
+  $('connectBtn').disabled = false;
+  $('connectBtn').textContent = 'Connect WhatsApp';
   $('disconnectBtn').classList.add('hidden');
+  $('logoutBtn').classList.add('hidden');
   $('qrBox').innerHTML = '<p class="hint">Disconnected. Click "Connect WhatsApp" to start a new session.</p>';
   updateStartState();
 });
 
+// Disconnect: keeps the saved session so reconnecting is instant.
 $('disconnectBtn').addEventListener('click', () => {
-  if (!confirm('Log out of WhatsApp and clear the saved session?\n\n' +
-    'This lets you connect a different number — you\'ll scan a new QR code next time.')) return;
-  socket.emit('disconnect-whatsapp', { logout: true });
+  socket.emit('disconnect-whatsapp', { logout: false });
   $('disconnectBtn').classList.add('hidden');
+  $('logoutBtn').classList.add('hidden');
   $('waText').textContent = 'Disconnecting...';
+});
+
+// Logout: clears the saved session — next connect will require a fresh QR scan.
+$('logoutBtn').addEventListener('click', () => {
+  if (!confirm('Log out and clear the saved session?\n\nYou will need to scan a new QR code next time.')) return;
+  socket.emit('disconnect-whatsapp', { logout: true });
+  document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  window.location.href = '/';
 });
 
 socket.on('wa-loading', ({ percent }) => {

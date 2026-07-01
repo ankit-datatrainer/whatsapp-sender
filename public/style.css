@@ -283,16 +283,141 @@ tbody tr:hover, table tr:hover { background: var(--wa-panel-2); }
 .log-box::-webkit-scrollbar-thumb { background: #2a3942; }
 
 /* ---------- Responsive ---------- */
+
+/* ---- Tablet (≤960px): stack to single column ---- */
 @media (max-width: 960px) {
   main { grid-template-columns: 1fr; }
 }
-@media (max-width: 560px) {
-  .brand-text p { display: none; }
-  .brand-text h1 { font-size: 17px; }
-  header { padding: 12px 16px; }
-  .wa-status { flex-direction: column-reverse; align-items: flex-end; gap: 8px; }
-  .grid2 { grid-template-columns: 1fr; }
-  .stats { flex-wrap: wrap; }
-  .stat { min-width: calc(33% - 8px); }
-  .btn { flex: 1; justify-content: center; }
+
+/* ---- Large phones / small tablets (≤680px) ---- */
+@media (max-width: 680px) {
+  /* Header: wrap brand + status vertically */
+  header {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .brand { flex: 1; min-width: 0; }
+  .brand-logo { width: 38px; height: 38px; }
+  .brand-logo svg { width: 22px; height: 22px; }
+  .brand-text h1 { font-size: 16px; }
+  .brand-text p { font-size: 11px; }
+
+  /* Status buttons row: full width under brand */
+  .wa-status {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  .wa-status .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  .status-pill {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  /* Cards */
+  .card { padding: 16px; border-radius: 12px; }
+  .card h2 { font-size: 15px; }
+  main { padding: 12px; gap: 14px; }
+  .col { gap: 14px; }
+
+  /* Forms */
+  .grid2 { grid-template-columns: 1fr; gap: 10px; }
+  input, select, textarea { font-size: 14px; padding: 10px 12px; }
+  input[type="file"] { padding: 16px; }
+
+  /* QR box */
+  .qr-box { min-height: 200px; padding: 16px; }
+  .qr-box img { width: 190px; height: 190px; padding: 10px; border-radius: 12px; }
+
+  /* Stats */
+  .stats { gap: 8px; }
+  .stat { padding: 12px 6px; border-radius: 10px; }
+  .stat span { font-size: 22px; }
+  .stat label { font-size: 10px; }
+
+  /* Log */
+  .log-box { height: 200px; padding: 10px; font-size: 11px; }
+
+  /* Steps */
+  .step { padding: 12px; border-radius: 10px; }
+  .step .delay-row { flex-wrap: wrap; gap: 6px; }
+  .step .delay-row input { width: 60px; }
+
+  /* Reports */
+  .report-item { flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; }
+  .report-item .reason { text-align: left; }
+
+  /* Buttons: bigger touch targets */
+  .btn { padding: 11px 16px; font-size: 13px; border-radius: 10px; }
+  .row { gap: 8px; }
+  .row .btn { flex: 1; justify-content: center; }
+
+  /* Tabs */
+  .tabs { gap: 4px; padding: 3px; border-radius: 8px; }
+  .tab { padding: 8px 10px; font-size: 12px; border-radius: 6px; }
 }
+
+/* ---- Small phones (≤420px) ---- */
+@media (max-width: 420px) {
+  /* Header compact */
+  header { padding: 10px 12px; gap: 8px; }
+  .brand-logo { width: 34px; height: 34px; }
+  .brand-logo svg { width: 20px; height: 20px; }
+  .brand-text h1 { font-size: 15px; }
+  .brand-text p { display: none; }
+
+  .wa-status { gap: 6px; }
+  .wa-status .btn { font-size: 11.5px; padding: 7px 10px; }
+  .status-pill { font-size: 11px; padding: 5px 8px; gap: 6px; }
+
+  /* Cards */
+  main { padding: 8px; gap: 10px; }
+  .card { padding: 14px; border-radius: 10px; }
+  .card h2 { font-size: 14px; gap: 8px; }
+  .badge { width: 22px; height: 22px; font-size: 11px; border-radius: 6px; }
+  .hint { font-size: 11.5px; margin: 4px 0 10px; }
+
+  /* Forms */
+  input, select, textarea { font-size: 13px; padding: 9px 10px; border-radius: 8px; }
+  label { font-size: 11px; margin-bottom: 10px; }
+  input[type="file"] { padding: 14px 10px; }
+  input[type="file"]::file-selector-button { padding: 7px 12px; font-size: 12px; }
+
+  /* QR box */
+  .qr-box { min-height: 180px; padding: 12px; }
+  .qr-box img { width: 160px; height: 160px; padding: 8px; border-radius: 10px; }
+  .qr-box .hint { font-size: 11.5px; }
+
+  /* Stats: 3-across on tiny screens */
+  .stats { gap: 6px; }
+  .stat { padding: 10px 4px; border-radius: 8px; }
+  .stat span { font-size: 20px; }
+  .stat label { font-size: 9px; letter-spacing: .3px; }
+
+  /* Progress */
+  .progress-bar { height: 10px; }
+
+  /* Log */
+  .log-box { height: 160px; padding: 8px; font-size: 10.5px; border-radius: 8px; }
+
+  /* Steps */
+  .step { padding: 10px; margin-bottom: 8px; border-radius: 8px; }
+  .step-head strong { font-size: 12.5px; }
+  .step .rm { width: 24px; height: 24px; font-size: 14px; border-radius: 6px; }
+
+  /* Table */
+  th, td { padding: 7px 8px; font-size: 11.5px; }
+
+  /* Report items */
+  .report-list { max-height: 180px; }
+  .report-item { font-size: 12px; padding: 8px 10px; }
+}
+
