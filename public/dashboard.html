@@ -142,7 +142,8 @@
   </section>
 </main>
 
-<script src="/socket.io/socket.io.js"></script>
+<script>if (localStorage.getItem('auth') !== 'true') window.location.href = '/';</script>
+<script src="https://whatsapp-campaign-manager-w73z.onrender.com/socket.io/socket.io.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
