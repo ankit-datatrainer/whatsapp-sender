@@ -318,6 +318,7 @@
       const data = await res.json();
       
       if (data.success) {
+        localStorage.setItem('auth', 'true');
         window.location.href = '/dashboard.html';
       } else {
         loginError.textContent = data.error || 'Invalid credentials';

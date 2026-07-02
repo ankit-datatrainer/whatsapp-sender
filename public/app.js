@@ -454,7 +454,8 @@ $('waLogoutBtn').addEventListener('click', () => {
 });
 
 // appLogoutBtn: logs out of the web dashboard entirely
-$('appLogoutBtn').addEventListener('click', () => {
+appLogoutBtn.addEventListener('click', () => {
+  localStorage.removeItem('auth');
   if (!confirm('Are you sure you want to log out of the dashboard?')) return;
   document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   window.location.href = '/';
