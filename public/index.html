@@ -295,6 +295,7 @@
     if (e.target === modal) closeLogin();
   });
 
+  const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://whatsapp-campaign-manager-w73z.onrender.com';
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';
@@ -308,7 +309,7 @@
       btn.textContent = 'Logging in...';
       btn.disabled = true;
 
-      const res = await fetch('/api/login', {
+      const res = await fetch(BACKEND_URL + '/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, password })

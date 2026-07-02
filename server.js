@@ -12,10 +12,17 @@ const QRCode = require('qrcode');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const fs = require('fs');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
+app.use(cors());
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'DELETE', 'PUT']
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 const isServerless = !!process.env.VERCEL;

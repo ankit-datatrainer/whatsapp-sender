@@ -1,4 +1,5 @@
-const socket = io();
+const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://whatsapp-campaign-manager-w73z.onrender.com';
+const socket = io(BACKEND_URL);
 
 // ---------- State ----------
 let uploaded = null;        // { filePath, sheetNames, columns, ... }
@@ -27,7 +28,7 @@ $('fileInput').addEventListener('change', async (e) => {
   $('fileInfo').classList.remove('hidden');
   $('fileInfo').textContent = 'Uploading & parsing...';
   try {
-    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const res = await fetch(BACKEND_URL + '/api/upload', { method: 'POST', body: fd });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     uploaded = data;
@@ -122,7 +123,7 @@ function renderPreview(columns, rows) {
 }
 
 $('sheetSelect').addEventListener('change', async () => {
-  const res = await fetch('/api/sheet', {
+  const res = await fetch(BACKEND_URL + '/api/sheet', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filePath: uploaded.filePath, sheetName: $('sheetSelect').value }),
   });
@@ -141,7 +142,7 @@ $('sheetSelect').addEventListener('change', async () => {
 // STEP 2 — Templates
 // =================================================================
 async function loadTemplates() {
-  templates = await (await fetch('/api/templates')).json();
+  templates = await (await fetch(BACKEND_URL + '/api/templates')).json();
   renderTemplateSelect();
 }
 function renderTemplateSelect() {
@@ -163,7 +164,7 @@ $('saveTplBtn').addEventListener('click', async () => {
   const body = $('tplBody').value.trim();
   if (!name || !body) return alert('Template name and body are required.');
   const id = $('templateSelect').value || undefined;
-  templates = await (await fetch('/api/templates', {
+  templates = await (await fetch(BACKEND_URL + '/api/templates', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, name, body }),
   })).json();
@@ -174,7 +175,7 @@ $('deleteTplBtn').addEventListener('click', async () => {
   const id = $('templateSelect').value;
   if (!id) return;
   if (!confirm('Delete this template?')) return;
-  templates = await (await fetch('/api/templates/' + id, { method: 'DELETE' })).json();
+  templates = await (await fetch(BACKEND_URL + '/api/templates/' + id, { method: 'DELETE' })).json();
   $('tplName').value = ''; $('tplBody').value = '';
   renderTemplateSelect();
 });
@@ -251,7 +252,7 @@ function addStep(prefill = {}) {
     saveNewBtn.textContent = 'Saving...';
     saveNewBtn.disabled = true;
     try {
-        templates = await (await fetch('/api/templates', {
+        templates = await (await fetch(BACKEND_URL + '/api/templates', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: name, body: bodyText.value }),
@@ -280,7 +281,7 @@ function addStep(prefill = {}) {
     updateBtn.textContent = 'Saving...';
     updateBtn.disabled = true;
     try {
-        templates = await (await fetch('/api/templates', {
+        templates = await (await fetch(BACKEND_URL + '/api/templates', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: t.id, name: t.name, body: bodyText.value }),
