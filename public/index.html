@@ -295,7 +295,7 @@
     if (e.target === modal) closeLogin();
   });
 
-  const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://whatsapp-campaign-manager-w73z.onrender.com';
+  const BACKEND_URL = '';
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.style.display = 'none';

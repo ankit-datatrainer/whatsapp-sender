@@ -1,4 +1,4 @@
-const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://whatsapp-campaign-manager-w73z.onrender.com';
+const BACKEND_URL = '';
 const socket = io(BACKEND_URL);
 
 // ---------- State ----------
