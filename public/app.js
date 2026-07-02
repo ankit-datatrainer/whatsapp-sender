@@ -448,201 +448,6 @@ $('disconnectBtn').addEventListener('click', () => {
 
 // waLogoutBtn: clears the WhatsApp saved session — next connect will require a fresh QR scan.
 $('waLogoutBtn').addEventListener('click', () => {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, body: bodyText.value }),
-        })).json();
-        renderTemplateSelect();
-        // The last item is our new template
-        const newTpl = templates[templates.length - 1];
-        tplSel.value = newTpl.id;
-        saveNewBtn.textContent = 'Saved!';
-        setTimeout(() => {
-            saveNewBtn.textContent = prevText;
-            saveNewBtn.disabled = false;
-            checkSaveBtn();
-        }, 1500);
-    } catch (err) {
-        alert('Failed: ' + err.message);
-        saveNewBtn.textContent = prevText;
-        saveNewBtn.disabled = false;
-    }
-  });
-
-  updateBtn.addEventListener('click', async () => {
-    const t = templates.find(x => x.id === tplSel.value);
-    if (!t) return;
-    const prevText = updateBtn.textContent;
-    updateBtn.textContent = 'Saving...';
-    updateBtn.disabled = true;
-    try {
-        templates = await (await fetch(BACKEND_URL + '/api/templates', {
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: t.id, name: t.name, body: bodyText.value }),
-        })).json();
-        renderTemplateSelect();
-        updateBtn.textContent = 'Saved!';
-        setTimeout(() => {
-            updateBtn.textContent = prevText;
-            updateBtn.disabled = false;
-            checkSaveBtn();
-        }, 1500);
-    } catch (err) {
-        alert('Failed: ' + err.message);
-        updateBtn.textContent = prevText;
-        updateBtn.disabled = false;
-    }
-  });
-
-  refreshStepTemplateDropdowns();
-  renumberSteps();
-  checkSaveBtn();
-}
-function renumberSteps() {
-  document.querySelectorAll('#sequence .step').forEach((s, i) => {
-    s.querySelector('.num').textContent = i + 1;
-    s.querySelector('.delayWrap').style.display = i === 0 ? 'none' : 'flex';
-  });
-}
-function refreshStepTemplateDropdowns() {
-  document.querySelectorAll('.stepTpl').forEach(sel => {
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">— custom text —</option>';
-    templates.forEach(t => {
-      const o = document.createElement('option');
-      o.value = t.id; o.textContent = t.name; sel.appendChild(o);
-    });
-    sel.value = prev;
-  });
-}
-function collectMessages() {
-  return [...document.querySelectorAll('#sequence .step')].map((s, i) => ({
-    delay: i === 0 ? 0 : parseInt(s.querySelector('.delay').value) || 0,
-    body: s.querySelector('.stepBody').value.trim(),
-  })).filter(m => m.body);
-}
-$('addStepBtn').addEventListener('click', () => addStep());
-
-// =================================================================
-// STEP 4 — Connect & launch
-// =================================================================
-const shouldAutoConnect = localStorage.getItem('waAutoConnect') === 'true';
-
-$('connectBtn').addEventListener('click', () => {
-  localStorage.setItem('waAutoConnect', 'true');
-  // Disable button to prevent double-clicks while reconnecting
-  $('connectBtn').disabled = true;
-  $('connectBtn').textContent = 'Connecting...';
-  socket.emit('connect-whatsapp');
-  $('qrBox').innerHTML = '<p class="hint">Disconnecting previous session & starting fresh... A QR code will appear shortly.</p>';
-});
-
-let waReady = false;
-function updateStartState() {
-  $('startBtn').disabled = !(waReady && uploaded && collectMessages().length > 0);
-}
-$('sequence').addEventListener('input', updateStartState);
-
-$('startBtn').addEventListener('click', () => {
-  const messages = collectMessages();
-  if (!messages.length) return alert('Add at least one message step.');
-  resetReports();
-  socket.emit('start-campaign', {
-    filePath: uploaded.filePath,
-    sheetName: uploaded.sheetNames.length > 1 ? $('sheetSelect').value : uploaded.sheetNames[0],
-    nameColumn: $('nameCol').value,
-    phoneColumn: $('phoneCol').value,
-    defaultCountryCode: $('countryCode').value.replace(/\D/g, ''),
-    messages,
-    minDelay: parseInt($('minDelay').value) || 0,
-    maxDelay: parseInt($('maxDelay').value) || 0,
-    limit: parseInt($('limit').value) || 0,
-  });
-  $('startBtn').classList.add('hidden');
-  $('stopBtn').classList.remove('hidden');
-});
-$('stopBtn').addEventListener('click', () => socket.emit('stop-campaign'));
-
-// =================================================================
-// Reports & progress
-// =================================================================
-let counts = { success: 0, fail: 0, total: 0 };
-function resetReports() {
-  counts = { success: 0, fail: 0, total: 0 };
-  $('successList').innerHTML = ''; $('failList').innerHTML = '';
-  updateCounts(); $('progressFill').style.width = '0%';
-}
-function updateCounts() {
-  $('successCount').textContent = counts.success;
-  $('failCount').textContent = counts.fail;
-  $('totalCount').textContent = counts.total;
-}
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    $('successList').classList.toggle('hidden', tab.dataset.tab !== 'successList');
-    $('failList').classList.toggle('hidden', tab.dataset.tab !== 'failList');
-  });
-});
-
-// =================================================================
-// Socket events
-// =================================================================
-socket.on('status', (s) => { 
-  if (s.waReady) {
-    markReady(); 
-  } else if (s.waInitializing) {
-    $('connectBtn').disabled = true;
-    $('connectBtn').textContent = 'Initializing...';
-    $('waLogoutBtn').classList.remove('hidden'); // allow aborting
-    $('qrBox').innerHTML = '<p class="hint">WhatsApp is currently initializing, please wait...</p>';
-  } else if (shouldAutoConnect) {
-    $('connectBtn').disabled = true;
-    $('connectBtn').textContent = 'Auto-connecting...';
-    socket.emit('connect-whatsapp');
-    $('qrBox').innerHTML = '<p class="hint">Auto-connecting to saved session...</p>';
-  }
-});
-socket.on('qr', (dataUrl) => { $('qrBox').innerHTML = `<img src="${dataUrl}" alt="QR" />`; });
-socket.on('wa-ready', markReady);
-function markReady() {
-  waReady = true;
-  $('waDot').className = 'dot on';
-  $('waText').textContent = 'Connected';
-  $('qrBox').innerHTML = '<p class="hint" style="color:var(--wa-green)">Connected &amp; authenticated. Session saved. You can start a campaign.</p>';
-  $('connectBtn').classList.add('hidden');
-  $('connectBtn').disabled = false;
-  $('connectBtn').textContent = 'Connect WhatsApp';
-  $('disconnectBtn').classList.remove('hidden');
-  $('waLogoutBtn').classList.remove('hidden');
-  updateStartState();
-}
-socket.on('wa-disconnected', () => {
-  waReady = false;
-  $('waDot').className = 'dot off';
-  $('waText').textContent = 'Disconnected';
-  $('connectBtn').classList.remove('hidden');
-  $('connectBtn').disabled = false;
-  $('connectBtn').textContent = 'Connect WhatsApp';
-  $('disconnectBtn').classList.add('hidden');
-  $('waLogoutBtn').classList.add('hidden');
-  $('qrBox').innerHTML = '<p class="hint">Disconnected. Click "Connect WhatsApp" to start a new session.</p>';
-  updateStartState();
-});
-
-// Disconnect: keeps the saved session so reconnecting is instant.
-$('disconnectBtn').addEventListener('click', () => {
-  localStorage.removeItem('waAutoConnect');
-  socket.emit('disconnect-whatsapp', { logout: false });
-  $('disconnectBtn').classList.add('hidden');
-  $('waLogoutBtn').classList.add('hidden');
-  $('waText').textContent = 'Disconnecting...';
-});
-
-// waLogoutBtn: clears the WhatsApp saved session — next connect will require a fresh QR scan.
-$('waLogoutBtn').addEventListener('click', () => {
   if (!confirm('Forget WhatsApp session?\n\nYou will need to scan a new QR code next time.')) return;
   localStorage.removeItem('waAutoConnect');
   socket.emit('disconnect-whatsapp', { logout: true });
@@ -671,7 +476,7 @@ socket.on('wa-error', (msg) => {
   $('qrBox').innerHTML = `<p class="hint" style="color:var(--red)">Connection failed: ${msg}<br>Check the live log and try again.</p>`;
 });
 socket.on('wa-auth-failure', () => {
-  $('qrBox').innerHTML = '<p class="hint" style="color:var(--red)">Authentication failed. Click Connect to retry.</p>`;
+  $('qrBox').innerHTML = '<p class="hint" style="color:var(--red)">Authentication failed. Click Connect to retry.</p>';
 });
 
 socket.on('campaign-start', ({ total }) => {
@@ -696,7 +501,7 @@ socket.on('contact-result', (r) => {
 socket.on('campaign-done', ({ success, failed }) => {
   $('progressText').textContent = `Done! ${success} sent, ${failed} failed.`;
   $('startBtn').classList.remove('hidden');
-  $('stopBtn').classList.remove('hidden');
+  $('stopBtn').classList.add('hidden');
 });
 
 socket.on('log', ({ time, message, level }) => {
