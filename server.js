@@ -13,8 +13,10 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const compression = require('compression');
 
 const app = express();
+app.use(compression());
 app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -49,7 +51,9 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.static(path.join(ROOT, 'public')));
+app.use(express.static(path.join(ROOT, 'public'), {
+    maxAge: '1d' // Cache static files for 1 day
+}));
 
 // ---------- Auth endpoint ----------
 app.post('/api/login', (req, res) => {
